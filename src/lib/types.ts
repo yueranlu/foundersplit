@@ -37,6 +37,29 @@ export const CATEGORY_LABELS: Record<ExpenseCategory, string> = {
   other: "Other",
 };
 
+export const CATEGORY_EMOJI: Record<ExpenseCategory, string> = {
+  software: "💻",
+  hosting: "☁️",
+  legal: "⚖️",
+  accounting: "📊",
+  marketing: "📣",
+  travel: "✈️",
+  meals: "🍜",
+  hardware: "🖥️",
+  contractors: "👷",
+  fees: "🏦",
+  other: "📦",
+};
+
+export type PaymentMethod = "e_transfer" | "venmo" | "cash" | "other";
+
+export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
+  e_transfer: "e-Transfer",
+  venmo: "Venmo",
+  cash: "Cash",
+  other: "Other",
+};
+
 export const CATEGORY_ORDER: ExpenseCategory[] = [
   "software",
   "hosting",
@@ -92,4 +115,17 @@ export interface Settlement {
   marked_paid_at: string | null;
   marked_paid_by: UUID | null;
   created_at: string;
+}
+
+export interface Payment {
+  id: UUID;
+  from_member_id: UUID;
+  to_member_id: UUID;
+  amount_cents: number;
+  made_at: string;
+  method: PaymentMethod;
+  note: string | null;
+  created_by: UUID;
+  created_at: string;
+  deleted_at: string | null;
 }

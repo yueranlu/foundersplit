@@ -128,3 +128,33 @@
     @apply font-sans;
   }
 }
+
+/* ─── warmer background wash + friendlier micro-animations ────────────────── */
+
+:root {
+  /* Softly-tinted page bg so cards pop and the app feels less clinical. */
+  --page-tint: oklch(0.985 0.008 90);
+}
+.dark {
+  --page-tint: oklch(0.16 0.005 260);
+}
+
+body {
+  background: var(--page-tint);
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-6px); }
+}
+.animate-float {
+  animation: float 3.2s ease-in-out infinite;
+}
+
+@keyframes pop-in {
+  0%   { transform: scale(0.94); opacity: 0; }
+  100% { transform: scale(1);    opacity: 1; }
+}
+.animate-pop-in {
+  animation: pop-in 240ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}

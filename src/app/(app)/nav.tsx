@@ -13,8 +13,7 @@ import {
 import { signOut } from "./actions";
 
 const TABS = [
-  { href: "/", label: "Add" },
-  { href: "/bills", label: "Bills" },
+  { href: "/", label: "Home" },
   { href: "/expenses", label: "Activity" },
   { href: "/team", label: "Team" },
 ] as const;
@@ -71,12 +70,9 @@ export function Nav({
           })}
         </nav>
 
-        <Link
-          href="/bills"
-          className="hidden text-sm font-medium text-muted-foreground hover:text-foreground sm:block"
-        >
+        <div className="hidden text-sm font-medium text-muted-foreground sm:block">
           {owedLabel}
-        </Link>
+        </div>
 
         <DropdownMenu>
           <DropdownMenuTrigger

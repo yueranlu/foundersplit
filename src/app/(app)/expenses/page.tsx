@@ -1,52 +1,43 @@
+import Link from "next/link";
+import { HandCoins, Plus } from "lucide-react";
 import { requireMember } from "@/lib/auth";
-import { listExpenses, listMembers } from "@/lib/queries";
-import { CATEGORY_LABELS, type Expense } from "@/lib/types";
-import { formatCents, splitEvenly } from "@/lib/money";
+import { listActivity, listMembers } from "@/lib/queries";
+import { ActivityRow } from "../activity-row";
 import { Card, CardContent } from "@/components/ui/card";
 
-function groupByMonth(expenses: Expense[]) {
-  const map = new Map<string, Expense[]>();
-  for (const e of expenses) {
-    const key = e.date.slice(0, 7);
-    if (!map.has(key)) map.set(key, []);
-    map.get(key)!.push(e);
+function groupByDay(items: Awaited<ReturnType<typeof listActivity>>) {
+  const map = new Map<string, typeof items>();
+  for (const it of items) {
+    const day = new Date(it.at).toISOString().slice(0, 10);
+    if (!map.has(day)) map.set(day, []);
+    map.get(day)!.push(it);
   }
-  return Array.from(map.entries()).sort((a, b) => b[0].localeCompare(a[0]));
+  return Array.from(map.entries()).sort((a, b) => (a[0] < b[0] ? 1 : -1));
 }
 
-const MONTH_LABELS = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
-];
-
-function monthLabel(key: string) {
-  const [y, m] = key.split("-");
-  return `${MONTH_LABELS[Number(m) - 1]} ${y}`;
+function friendlyDay(day: string): string {
+  const now = new Date();
+  const d = new Date(day);
+  const diffDays = Math.round(
+    (now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24),
+  );
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return "Yesterday";
+  if (diffDays < 7) return `${diffDays} days ago`;
+  return d.toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
 }
 
 export default async function ActivityPage() {
   const me = await requireMember();
-  const [members, expenses] = await Promise.all([listMembers(), listExpenses()]);
-  const headcount = Math.max(1, members.length);
-  const grouped = groupByMonth(expenses);
-
-  if (grouped.length === 0) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight">Activity</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Every expense, and what it cost each of you.
-          </p>
-        </div>
-        <Card>
-          <CardContent className="py-12 text-center text-sm text-muted-foreground">
-            No expenses logged yet. Add the first one from the home page.
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  const [members, activity] = await Promise.all([
+    listMembers(),
+    listActivity(),
+  ]);
+  const grouped = groupByDay(activity);
 
   return (
     <div className="space-y-6">
@@ -54,77 +45,49 @@ export default async function ActivityPage() {
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">Activity</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Every expense, and what it cost each of you.
+            Every expense and payment, most recent first.
           </p>
         </div>
-        <button className="text-sm text-muted-foreground hover:text-foreground">
-          Export CSV
-        </button>
       </div>
 
-      {grouped.map(([month, list]) => {
-        const total = list.reduce((a, e) => a + e.amount_cents, 0);
-        const yourShare = splitEvenly(total, headcount)[0];
-        return (
-          <section key={month} className="space-y-3">
-            <div className="flex items-baseline justify-between">
-              <h2 className="text-xl font-semibold tracking-tight">
-                {monthLabel(month)}{" "}
-                <span className="ml-1 text-sm font-normal text-muted-foreground">
-                  ({list.length} {list.length === 1 ? "expense" : "expenses"})
-                </span>
-              </h2>
-              <div className="text-right">
-                <div className="font-semibold tabular-nums">
-                  {formatCents(total)}
-                </div>
-                <div className="text-xs text-muted-foreground tabular-nums">
-                  {formatCents(yourShare)} your share
-                </div>
-              </div>
+      {activity.length === 0 ? (
+        <Card className="rounded-2xl border-dashed">
+          <CardContent className="grid place-items-center gap-4 py-12 text-center">
+            <div className="animate-float text-6xl">🌱</div>
+            <div className="font-medium">Nothing yet</div>
+            <div className="text-sm text-muted-foreground">
+              Once someone adds an expense or records a payment, it&apos;ll show here.
             </div>
-
+            <div className="mt-2 flex gap-2">
+              <Link
+                href="/"
+                className="inline-flex items-center gap-1 rounded-full bg-foreground px-4 py-2 text-sm font-medium text-background hover:opacity-90"
+              >
+                <Plus className="h-4 w-4" />
+                Add expense
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        grouped.map(([day, items]) => (
+          <section key={day} className="space-y-2">
+            <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
+              {friendlyDay(day)}
+            </h2>
             <ul className="space-y-2">
-              {list.map((exp) => {
-                const paidBy = members.find((m) => m.id === exp.paid_by);
-                const per = splitEvenly(exp.amount_cents, headcount)[0];
-                return (
-                  <Card key={exp.id}>
-                    <CardContent className="space-y-2 py-4">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="min-w-0 flex-1">
-                          <div className="font-medium">{exp.description}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {CATEGORY_LABELS[exp.category]}
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <div className="font-semibold tabular-nums">
-                            {formatCents(exp.amount_cents)}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex flex-wrap gap-x-2 text-xs text-muted-foreground">
-                        <span>
-                          {paidBy?.id === me.id
-                            ? "You paid"
-                            : `${paidBy?.display_name ?? "?"} paid`}
-                        </span>
-                        <span>·</span>
-                        <span>{exp.date}</span>
-                        <span>·</span>
-                        <span>
-                          → {formatCents(per)} each × {headcount}
-                        </span>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
+              {items.map((item, i) => (
+                <ActivityRow
+                  key={i}
+                  item={item}
+                  members={members}
+                  meId={me.id}
+                />
+              ))}
             </ul>
           </section>
-        );
-      })}
+        ))
+      )}
     </div>
   );
 }

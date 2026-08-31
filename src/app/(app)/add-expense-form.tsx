@@ -5,15 +5,20 @@ import { Paperclip } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { CATEGORY_LABELS, CATEGORY_ORDER, type Member } from "@/lib/types";
+import {
+  CATEGORY_EMOJI,
+  CATEGORY_LABELS,
+  CATEGORY_ORDER,
+  type Member,
+} from "@/lib/types";
+import { cn } from "@/lib/utils";
+import { createExpense } from "./actions";
+
+const selectClass = cn(
+  "flex h-10 w-full items-center rounded-xl border border-input bg-background px-3 py-1 text-sm shadow-xs",
+  "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+);
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -26,33 +31,36 @@ export function AddExpenseForm({
 }) {
   const [paidBy, setPaidBy] = useState<string>(currentMemberId);
   const [category, setCategory] = useState<string>("other");
-  const [splitMode, setSplitMode] = useState<"even" | "custom">("even");
-  const [excluded, setExcluded] = useState<Set<string>>(new Set());
-
-  const activeCount = Math.max(1, members.length - excluded.size);
 
   return (
-    <form className="space-y-5">
+    <form action={createExpense} className="space-y-5">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="date">Date</Label>
-          <Input id="date" name="date" type="date" defaultValue={today()} />
+          <Input
+            id="date"
+            name="date"
+            type="date"
+            defaultValue={today()}
+            className="rounded-xl"
+          />
         </div>
         <div className="space-y-2">
           <Label htmlFor="paid_by">Paid by</Label>
-          <Select value={paidBy} onValueChange={(v) => v && setPaidBy(v)}>
-            <SelectTrigger id="paid_by">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {members.map((m) => (
-                <SelectItem key={m.id} value={m.id}>
-                  {m.display_name}
-                  {m.id === currentMemberId ? " (you)" : ""}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <select
+            id="paid_by"
+            name="paid_by"
+            value={paidBy}
+            onChange={(e) => setPaidBy(e.target.value)}
+            className={selectClass}
+          >
+            {members.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.display_name}
+                {m.id === currentMemberId ? " (you)" : ""}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 
@@ -62,24 +70,27 @@ export function AddExpenseForm({
           id="description"
           name="description"
           placeholder="Incorporation filing fee"
+          className="rounded-xl"
+          required
         />
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="category">Category</Label>
-          <Select value={category} onValueChange={(v) => v && setCategory(v)}>
-            <SelectTrigger id="category">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {CATEGORY_ORDER.map((k) => (
-                <SelectItem key={k} value={k}>
-                  {CATEGORY_LABELS[k]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <select
+            id="category"
+            name="category"
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            className={selectClass}
+          >
+            {CATEGORY_ORDER.map((k) => (
+              <option key={k} value={k}>
+                {CATEGORY_EMOJI[k]}  {CATEGORY_LABELS[k]}
+              </option>
+            ))}
+          </select>
         </div>
         <div className="space-y-2">
           <Label htmlFor="amount">Amount</Label>
@@ -89,6 +100,8 @@ export function AddExpenseForm({
             type="text"
             inputMode="decimal"
             placeholder="0.00"
+            className="rounded-xl"
+            required
           />
         </div>
       </div>
@@ -98,90 +111,42 @@ export function AddExpenseForm({
         <Textarea
           id="note"
           name="note"
-          placeholder="Anything the team should know about this expense"
+          placeholder="Anything the team should know"
           rows={2}
+          className="rounded-xl"
         />
       </div>
 
-      <div className="rounded-lg border border-dashed p-4">
-        <div className="mb-3 flex items-center justify-between gap-2">
-          <div>
-            <div className="text-sm font-medium">Split</div>
-            <div className="text-xs text-muted-foreground">
-              {splitMode === "even"
-                ? `Evenly across ${activeCount} of ${members.length}`
-                : "Custom — pick who this is for"}
-            </div>
-          </div>
-          <div className="flex gap-1 text-xs">
-            <button
-              type="button"
-              onClick={() => setSplitMode("even")}
-              className={`rounded px-2 py-1 ${
-                splitMode === "even"
-                  ? "bg-foreground text-background"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              Even
-            </button>
-            <button
-              type="button"
-              onClick={() => setSplitMode("custom")}
-              className={`rounded px-2 py-1 ${
-                splitMode === "custom"
-                  ? "bg-foreground text-background"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              Choose
-            </button>
-          </div>
+      <div className="rounded-xl border border-dashed border-muted-foreground/30 bg-muted/30 p-4">
+        <div className="text-sm">
+          <span className="font-medium">Splits evenly</span>{" "}
+          <span className="text-muted-foreground">
+            across all {members.length} of you. Custom splits coming soon.
+          </span>
         </div>
-
-        {splitMode === "custom" && (
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            {members.map((m) => {
-              const on = !excluded.has(m.id);
-              return (
-                <button
-                  key={m.id}
-                  type="button"
-                  onClick={() =>
-                    setExcluded((prev) => {
-                      const next = new Set(prev);
-                      if (on) next.add(m.id);
-                      else next.delete(m.id);
-                      return next;
-                    })
-                  }
-                  className={`rounded-md border px-3 py-2 text-left text-sm transition-colors ${
-                    on
-                      ? "border-foreground/30 bg-muted"
-                      : "border-dashed text-muted-foreground"
-                  }`}
-                >
-                  {m.display_name}
-                  {m.id === currentMemberId ? " (you)" : ""}
-                </button>
-              );
-            })}
-          </div>
-        )}
       </div>
 
-      <div className="rounded-lg border border-dashed p-4">
+      <div className="rounded-xl border border-dashed border-muted-foreground/30 bg-muted/30 p-4">
         <Label className="mb-2 block">Receipts</Label>
-        <Button variant="outline" type="button" className="gap-2">
+        <Button
+          variant="outline"
+          type="button"
+          className="gap-2 rounded-lg"
+          disabled
+        >
           <Paperclip className="h-4 w-4" />
           Attach PDF or photo
         </Button>
         <p className="mt-2 text-xs text-muted-foreground">
-          PDF, PNG, JPG, WebP or HEIC. Up to 20 MB each.
+          Receipt uploads coming soon.
         </p>
       </div>
 
-      <Button type="submit" className="w-full" size="lg">
+      <Button
+        type="submit"
+        className="w-full rounded-xl"
+        size="lg"
+      >
         Add expense
       </Button>
     </form>

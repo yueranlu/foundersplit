@@ -1,5 +1,6 @@
 import { requireMember } from "@/lib/auth";
 import { listMembers } from "@/lib/queries";
+import { createMember } from "../actions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -62,28 +63,37 @@ export default async function TeamPage() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="rounded-2xl">
         <CardHeader>
           <CardTitle className="text-lg">Add a cofounder</CardTitle>
         </CardHeader>
         <CardContent>
-          <form className="space-y-4">
+          <form action={createMember} className="space-y-4">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="member_name">Name</Label>
-                <Input id="member_name" name="member_name" placeholder="Alice" />
+                <Label htmlFor="display_name">Name</Label>
+                <Input
+                  id="display_name"
+                  name="display_name"
+                  placeholder="Alice"
+                  className="rounded-xl"
+                  required
+                />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="member_email">Email (optional)</Label>
+                <Label htmlFor="email">Email (optional)</Label>
                 <Input
-                  id="member_email"
-                  name="member_email"
+                  id="email"
+                  name="email"
                   type="email"
                   placeholder="alice@example.com"
+                  className="rounded-xl"
                 />
               </div>
             </div>
-            <Button type="submit">Add cofounder</Button>
+            <Button type="submit" className="rounded-xl">
+              Add cofounder
+            </Button>
           </form>
         </CardContent>
       </Card>
