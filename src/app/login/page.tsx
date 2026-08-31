@@ -32,9 +32,19 @@ export default function LoginPage() {
               autoCapitalize="none"
             />
           </div>
+          <div className="space-y-2">
+            <Label htmlFor="passcode">Team passcode</Label>
+            <Input
+              id="passcode"
+              name="passcode"
+              type="password"
+              placeholder="••••••••"
+              autoComplete="current-password"
+            />
+          </div>
           <Button type="submit" className="w-full">Continue</Button>
           <p className="text-center text-xs text-muted-foreground">
-            Just your first name, lowercase. No password.
+            First name lowercase. Ask a cofounder for the passcode.
           </p>
         </form>
       </div>

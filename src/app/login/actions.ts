@@ -2,21 +2,27 @@
 
 import { redirect } from "next/navigation";
 import { createSession } from "@/lib/auth";
-import { DEMO_CURRENT_MEMBER_ID, DEMO_MEMBERS } from "@/lib/demo";
+import { getMemberByFirstName } from "@/lib/queries";
 
 /**
- * Shell mode: accepts any known first name from the demo list and signs in.
- * Real DB lookup lands when schema is wired.
+ * Sign in. First name identifies the cofounder; team passcode is a shared
+ * secret that gates drive-by access. If TEAM_PASSCODE env var isn't set,
+ * the passcode check is skipped (dev / local mode).
  */
 export async function signIn(formData: FormData): Promise<void> {
-  const raw = String(formData.get("name") ?? "").trim().toLowerCase();
-  if (!raw) throw new Error("Enter your first name.");
+  const name = String(formData.get("name") ?? "").trim().toLowerCase();
+  const passcode = String(formData.get("passcode") ?? "").trim();
 
-  const member = DEMO_MEMBERS.find((m) => m.first_name === raw);
+  if (!name) throw new Error("Enter your first name.");
+
+  const expected = process.env.TEAM_PASSCODE;
+  if (expected && passcode !== expected) {
+    throw new Error("Wrong team passcode.");
+  }
+
+  const member = await getMemberByFirstName(name);
   if (!member) throw new Error("That name isn't on the team.");
 
-  // In shell mode we always sign the current user in as the "you" demo member
-  // so balances match the mocked data.
-  await createSession(DEMO_CURRENT_MEMBER_ID);
+  await createSession(member.id);
   redirect("/");
 }

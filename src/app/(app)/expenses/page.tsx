@@ -1,10 +1,7 @@
+import { requireMember } from "@/lib/auth";
+import { listExpenses, listMembers } from "@/lib/queries";
 import { CATEGORY_LABELS, type Expense } from "@/lib/types";
 import { formatCents, splitEvenly } from "@/lib/money";
-import {
-  DEMO_CURRENT_MEMBER_ID,
-  DEMO_EXPENSES,
-  DEMO_MEMBERS,
-} from "@/lib/demo";
 import { Card, CardContent } from "@/components/ui/card";
 
 function groupByMonth(expenses: Expense[]) {
@@ -27,10 +24,29 @@ function monthLabel(key: string) {
   return `${MONTH_LABELS[Number(m) - 1]} ${y}`;
 }
 
-export default function ActivityPage() {
-  const meId = DEMO_CURRENT_MEMBER_ID;
-  const headcount = DEMO_MEMBERS.length;
-  const grouped = groupByMonth(DEMO_EXPENSES);
+export default async function ActivityPage() {
+  const me = await requireMember();
+  const [members, expenses] = await Promise.all([listMembers(), listExpenses()]);
+  const headcount = Math.max(1, members.length);
+  const grouped = groupByMonth(expenses);
+
+  if (grouped.length === 0) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight">Activity</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Every expense, and what it cost each of you.
+          </p>
+        </div>
+        <Card>
+          <CardContent className="py-12 text-center text-sm text-muted-foreground">
+            No expenses logged yet. Add the first one from the home page.
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -70,7 +86,7 @@ export default function ActivityPage() {
 
             <ul className="space-y-2">
               {list.map((exp) => {
-                const paidBy = DEMO_MEMBERS.find((m) => m.id === exp.paid_by);
+                const paidBy = members.find((m) => m.id === exp.paid_by);
                 const per = splitEvenly(exp.amount_cents, headcount)[0];
                 return (
                   <Card key={exp.id}>
@@ -90,9 +106,9 @@ export default function ActivityPage() {
                       </div>
                       <div className="flex flex-wrap gap-x-2 text-xs text-muted-foreground">
                         <span>
-                          {paidBy?.id === meId
+                          {paidBy?.id === me.id
                             ? "You paid"
-                            : `${paidBy?.display_name} paid`}
+                            : `${paidBy?.display_name ?? "?"} paid`}
                         </span>
                         <span>·</span>
                         <span>{exp.date}</span>

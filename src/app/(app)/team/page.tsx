@@ -1,11 +1,13 @@
-import { DEMO_CURRENT_MEMBER_ID, DEMO_MEMBERS } from "@/lib/demo";
+import { requireMember } from "@/lib/auth";
+import { listMembers } from "@/lib/queries";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-export default function TeamPage() {
-  const meId = DEMO_CURRENT_MEMBER_ID;
+export default async function TeamPage() {
+  const me = await requireMember();
+  const members = await listMembers();
 
   return (
     <div className="space-y-8">
@@ -20,16 +22,13 @@ export default function TeamPage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">
-            {DEMO_MEMBERS.length} cofounders
+            {members.length} cofounder{members.length === 1 ? "" : "s"}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <ul className="divide-y">
-            {DEMO_MEMBERS.map((m) => (
-              <li
-                key={m.id}
-                className="flex items-center gap-3 py-3"
-              >
+            {members.map((m) => (
+              <li key={m.id} className="flex items-center gap-3 py-3">
                 <div
                   className="grid h-9 w-9 place-items-center rounded-full text-sm font-medium text-white"
                   style={{ background: m.avatar_color ?? "#94a3b8" }}
@@ -39,7 +38,7 @@ export default function TeamPage() {
                 <div className="min-w-0 flex-1">
                   <div className="font-medium">
                     {m.display_name}
-                    {m.id === meId && (
+                    {m.id === me.id && (
                       <span className="ml-2 text-xs text-muted-foreground">
                         (you)
                       </span>
@@ -51,9 +50,6 @@ export default function TeamPage() {
                       {m.first_name}
                     </code>
                   </div>
-                </div>
-                <div className="text-right text-sm text-muted-foreground">
-                  {m.id === meId ? "—" : "settled"}
                 </div>
               </li>
             ))}

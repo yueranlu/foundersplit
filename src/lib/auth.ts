@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { getSupabaseServer } from "./supabase/server";
+import { getMemberById } from "./queries";
 import type { Member } from "./types";
 
 const SESSION_COOKIE = "foundersplit_session";
@@ -57,16 +57,10 @@ export async function currentMemberId(): Promise<string | null> {
 export async function requireMember(): Promise<Member> {
   const memberId = await currentMemberId();
   if (!memberId) redirect("/login");
-  const supabase = await getSupabaseServer();
-  const { data, error } = await supabase
-    .from("members")
-    .select("*")
-    .eq("id", memberId)
-    .is("deactivated_at", null)
-    .single();
-  if (error || !data) {
+  const member = await getMemberById(memberId);
+  if (!member || member.deactivated_at) {
     await clearSession();
     redirect("/login");
   }
-  return data as Member;
+  return member;
 }

@@ -2,37 +2,41 @@ import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { AddExpenseForm } from "./add-expense-form";
 import { RecentList } from "./recent-list";
-import {
-  DEMO_CURRENT_MEMBER_ID,
-  DEMO_EXPENSES,
-  DEMO_MEMBERS,
-} from "@/lib/demo";
-import { formatCents, splitEvenly } from "@/lib/money";
+import { requireMember } from "@/lib/auth";
+import { getMonthSummary, listMembers } from "@/lib/queries";
+import { formatCents } from "@/lib/money";
 import { Card, CardContent } from "@/components/ui/card";
 
-export default function HomePage() {
-  const meId = DEMO_CURRENT_MEMBER_ID;
-  const headcount = DEMO_MEMBERS.length;
+function currentMonthKey(): string {
+  const d = new Date();
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+}
 
-  const monthKey = "2026-08";
-  const monthExpenses = DEMO_EXPENSES.filter((e) =>
-    e.date.startsWith(monthKey),
+function daysUntilEndOfMonth(): number {
+  const now = new Date();
+  const eom = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0),
   );
+  return Math.max(0, Math.ceil((eom.getTime() - now.getTime()) / 86400000));
+}
 
-  const owedToMeCents = monthExpenses
-    .filter((e) => e.paid_by === meId)
-    .reduce((acc, e) => {
-      const share = splitEvenly(e.amount_cents, headcount)[0];
-      return acc + (e.amount_cents - share);
-    }, 0);
+function monthLabel(key: string): string {
+  const [y, m] = key.split("-");
+  const names = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December",
+  ];
+  return `${names[Number(m) - 1]} ${y}`;
+}
 
-  const dueDate = new Date(Date.UTC(2026, 7, 31));
-  const daysUntilDue = Math.max(
-    0,
-    Math.ceil(
-      (dueDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24),
-    ),
-  );
+export default async function HomePage() {
+  const me = await requireMember();
+  const monthKey = currentMonthKey();
+  const [members, summary] = await Promise.all([
+    listMembers(),
+    getMonthSummary(monthKey, me.id),
+  ]);
+  const daysDue = daysUntilEndOfMonth();
 
   return (
     <div className="space-y-8">
@@ -40,14 +44,20 @@ export default function HomePage() {
         <Card className="transition-shadow group-hover:shadow-md">
           <CardContent className="flex items-center justify-between gap-4">
             <div className="space-y-1">
-              <div className="text-sm text-muted-foreground">August 2026</div>
+              <div className="text-sm text-muted-foreground">
+                {monthLabel(monthKey)}
+              </div>
               <div className="text-2xl font-semibold tracking-tight">
-                You&apos;re owed {formatCents(owedToMeCents)}
+                {summary.youreOwedCents > 0
+                  ? `You're owed ${formatCents(summary.youreOwedCents)}`
+                  : summary.youreOwedCents < 0
+                  ? `You owe ${formatCents(-summary.youreOwedCents)}`
+                  : "You're settled"}
               </div>
               <div className="text-sm text-muted-foreground">
-                Due in {daysUntilDue} {daysUntilDue === 1 ? "day" : "days"} ·{" "}
-                {monthExpenses.length}{" "}
-                {monthExpenses.length === 1 ? "expense" : "expenses"} so far
+                Due in {daysDue} {daysDue === 1 ? "day" : "days"} ·{" "}
+                {summary.expenses.length}{" "}
+                {summary.expenses.length === 1 ? "expense" : "expenses"} so far
               </div>
             </div>
             <ChevronRight className="h-5 w-5 text-muted-foreground" />
@@ -61,11 +71,11 @@ export default function HomePage() {
             Add an expense
           </h2>
           <p className="text-sm text-muted-foreground">
-            Splits evenly across all {headcount} of you, unless you say
+            Splits evenly across all {summary.headcount} of you, unless you say
             otherwise.
           </p>
         </div>
-        <AddExpenseForm members={DEMO_MEMBERS} currentMemberId={meId} />
+        <AddExpenseForm members={members} currentMemberId={me.id} />
       </section>
 
       <section className="space-y-4">
@@ -79,9 +89,9 @@ export default function HomePage() {
           </Link>
         </div>
         <RecentList
-          expenses={monthExpenses}
-          members={DEMO_MEMBERS}
-          currentMemberId={meId}
+          expenses={summary.expenses}
+          members={members}
+          currentMemberId={me.id}
         />
       </section>
     </div>
