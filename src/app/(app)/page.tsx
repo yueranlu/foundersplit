@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, HandCoins, Plus } from "lucide-react";
+import { HandCoins } from "lucide-react";
 import { requireMember } from "@/lib/auth";
 import { getBalanceOverview, listActivity } from "@/lib/queries";
 import { formatCents } from "@/lib/money";

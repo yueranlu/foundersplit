@@ -10,7 +10,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { PAYMENT_METHOD_LABELS, type PaymentMethod } from "@/lib/types";
+import type { PaymentMethod } from "@/lib/types";
+import { PAYMENT_METHOD_LABELS } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const selectClass = cn(

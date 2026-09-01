@@ -14,8 +14,11 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["src/**/*.{test,spec}.{ts,tsx}"],
-    exclude: ["node_modules", ".next"],
+    exclude: ["node_modules", ".next", "tests/e2e/**"],
     reporters: process.env.CI ? ["default", "junit"] : ["default"],
     outputFile: { junit: "./test-results.xml" },
+    // Files that touch the DOM opt in with a top-of-file
+    // `// @vitest-environment jsdom` comment. Everything else runs in node.
+    setupFiles: ["./tests/setup-dom.ts"],
   },
 });

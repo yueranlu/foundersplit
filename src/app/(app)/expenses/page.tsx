@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { HandCoins, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { requireMember } from "@/lib/auth";
 import { listActivity, listMembers } from "@/lib/queries";
 import { ActivityRow } from "../activity-row";
