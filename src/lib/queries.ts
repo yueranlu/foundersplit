@@ -244,17 +244,24 @@ export type BalanceOverview = {
   hasActivity: boolean;
 };
 
-export async function getBalanceOverview(
-  meId: string,
-): Promise<BalanceOverview> {
-  const [members, expenses, payments] = await Promise.all([
-    listMembers(),
-    listExpenses(),
-    listPayments(),
-  ]);
-
+/**
+ * Pure balance calculation. Given a set of members, expenses, and payments,
+ * compute the balance overview from `meId`'s perspective. Extracted from the
+ * database-facing `getBalanceOverview` so it can be unit tested without any
+ * infrastructure. See src/lib/queries.test.ts.
+ */
+export function computeBalanceOverview({
+  members,
+  expenses,
+  payments,
+  meId,
+}: {
+  members: Member[];
+  expenses: Expense[];
+  payments: Payment[];
+  meId: string;
+}): BalanceOverview {
   const headcount = Math.max(1, members.length);
-  const memberIndex = new Map(members.map((m, i) => [m.id, i]));
 
   // Pairwise ledger: ledger[A][B] = how much B owes A (net, at cents precision).
   const ledger = new Map<string, Map<string, number>>();
@@ -277,10 +284,8 @@ export async function getBalanceOverview(
   }
 
   // Payments: from_member paid to_member. This reduces what from_member owes
-  // to_member (or grows what to_member owes from_member — same coin).
+  // to_member (or grows what to_member owes from_member; same coin).
   for (const p of payments) {
-    // to_member is creditor; from_member is debtor paying down their debt.
-    // Reduce ledger[to_member][from_member] by the amount.
     bump(p.to_member_id, p.from_member_id, -p.amount_cents);
   }
 
@@ -323,6 +328,17 @@ export async function getBalanceOverview(
     pairs,
     hasActivity,
   };
+}
+
+export async function getBalanceOverview(
+  meId: string,
+): Promise<BalanceOverview> {
+  const [members, expenses, payments] = await Promise.all([
+    listMembers(),
+    listExpenses(),
+    listPayments(),
+  ]);
+  return computeBalanceOverview({ members, expenses, payments, meId });
 }
 
 /** Get the current net for a single pair. Used by the settle-up screen. */
